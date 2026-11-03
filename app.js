@@ -4,6 +4,8 @@
 (function () {
   "use strict";
   var REPO = "editroom1980/DAILY-SF-data";
+  // 通知（Web Push）の公開鍵。秘密の側は Mac の ~/Library/Application Support/DAILY-SF/通知の鍵.json だけにある
+  var VAPID = "BKUtPvNeI-3B8ox4e2vvhxH9gU0kz34FnIa01Kfi8EO-LjYTlixwSqaacShqB1dV-OJWmJ0GdDAfgvvlis2--oU";
   var $ = function (id) { return document.getElementById(id); };
   var rates = [0.8, 1, 1.2, 1.4];
   var saved = load();
@@ -64,24 +66,46 @@
   }
   function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
 
+  function allIds() {
+    var ids = [];
+    (shelf.days || []).forEach(function (d) { d.books.forEach(function (b) { ids.push(b.id); }); });
+    (shelf.long || []).forEach(function (b) { ids.push(b.id); });
+    return ids;
+  }
+  // はじめて本棚を読んだときは、今ある本をすべて読んだことにする（入れた日に15本が新着にならないように）
+  function seenInit() {
+    if (saved.seen) return;
+    saved.seen = {}; allIds().forEach(function (id) { saved.seen[id] = 1; }); save();
+  }
+  function isNew(id) { return saved.seen && !saved.seen[id]; }
+  function badge() {
+    var n = allIds().filter(isNew).length;
+    if (navigator.setAppBadge && "Notification" in window && Notification.permission === "granted") {
+      (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(function () {});
+    }
+    return n;
+  }
+
   function drawShelf() {
+    seenInit();
     var h = [];
     var req = (shelf && shelf.requests) || {};
     if (shelf.long && shelf.long.length) {
       h.push('<h2 class="day">長編</h2><ol class="shelf">');
-      shelf.long.forEach(function (b) { h.push(bookRow(b, ' <span class="tag">長編</span>')); });
+      shelf.long.forEach(function (b) { h.push(bookRow(b, ' <span class="tag">長編</span>' + (isNew(b.id) ? ' <span class="tag new">新着</span>' : ""))); });
       h.push("</ol>");
     }
     (shelf.days || []).forEach(function (d) {
       h.push('<h2 class="day">' + esc(d.label) + '</h2><ol class="shelf">');
       d.books.forEach(function (b) {
         var r = req[b.id];
-        h.push(bookRow(b, r ? ' <span class="tag">' + (r.state === "完成" ? "長編あり" : "長編を作成待ち") + "</span>" : ""));
+        h.push(bookRow(b, (isNew(b.id) ? ' <span class="tag new">新着</span>' : "") + (r ? ' <span class="tag">' + (r.state === "完成" ? "長編あり" : "長編を作成待ち") + "</span>" : "")));
       });
       h.push("</ol>");
     });
     $("shelves").innerHTML = h.join("");
-    $("updated").textContent = shelf.updated ? "最終更新 " + shelf.updated + "。毎朝6時に新しい3本が届きます。" : "";
+    var n = badge();
+    $("updated").textContent = (shelf.updated ? "最終更新 " + shelf.updated + "。毎朝6時に新しい3本が届きます。" : "") + (n ? "新着 " + n + "本。" : "");
     if (!$("reader").hidden) return;
     show("list");
   }
@@ -93,6 +117,7 @@
     note("note", "");
     gh("books/" + id + ".json").then(function (b) {
       state.book = b;
+      saved.seen = saved.seen || {}; saved.seen[id] = 1; save(); if (shelf) badge();
       $("article").innerHTML = '<h1 class="st">' + esc(b.heading || b.title) + "</h1>" + b.html;
       $("vv").textContent = b.audio ? "VOICEVOX:" + (b.voice || "") : "朗読なし";
       ["play", "prev", "next", "rate"].forEach(function (k) { $(k).disabled = !b.audio; });
@@ -260,6 +285,50 @@
   });
   snd.addEventListener("ended", function () { setPlaying(false); note("note", "最後まで読みました。"); });
 
+  // ── 通知（新しい短編が届いたら知らせる）──
+  function b64uBytes(s) {
+    var b = atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+  function pushState() {
+    var el = $("push-state"), btn = $("push");
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      el.textContent = "この画面では通知を受け取れません。iPhone ではホーム画面に追加した DAILY-SF から開いてください。"; btn.hidden = true; return;
+    }
+    btn.hidden = false;
+    if (Notification.permission === "granted" && saved.push) { el.textContent = "新しい短編が届くと、この iPhone に通知とバッジが出ます。"; btn.textContent = "通知をつなぎ直す"; }
+    else if (Notification.permission === "denied") { el.textContent = "通知が許可されていません。設定アプリ › 通知 › DAILY-SF で許可してください。"; btn.textContent = "新しい短編を知らせる"; }
+    else { el.textContent = "毎朝の新しい短編が届いたら、通知とアイコンのバッジで知らせます。"; btn.textContent = "新しい短編を知らせる"; }
+  }
+  function putFile(p, text, msg) {
+    // 置いてあれば sha を付けて上書きする
+    return fetch(url(p) + "?t=" + Date.now(), { headers: head(false), cache: "no-store" }).then(function (r) {
+      return r.ok ? r.json().then(function (j) { return j.sha; }) : null;
+    }).then(function (sha) {
+      var body = { message: msg, content: b64(text) };
+      if (sha) body.sha = sha;
+      return fetch(url(p), { method: "PUT", headers: head(false), body: JSON.stringify(body) });
+    }).then(function (r) { if (!r.ok) throw new Error("GitHub " + r.status); });
+  }
+  function subscribe() {
+    var el = $("push-state");
+    el.textContent = "つないでいます…";
+    Notification.requestPermission().then(function (ok) {
+      if (ok !== "granted") throw new Error("通知が許可されませんでした。設定アプリ › 通知 › DAILY-SF で許可してください");
+      return navigator.serviceWorker.ready;
+    }).then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uBytes(VAPID) }); });
+    }).then(function (sub) {
+      if (!saved.device) { saved.device = "iphone-" + Math.random().toString(36).slice(2, 10); save(); }
+      var j = sub.toJSON(); j.at = new Date().toISOString();
+      return putFile("subs/" + saved.device + ".json", JSON.stringify(j, null, 2) + "\n", "iPhone：新しい短編の通知を受け取る");
+    }).then(function () {
+      saved.push = 1; save(); pushState(); if (shelf) badge();
+    }).catch(function (e) { el.textContent = "つなげませんでした：" + e.message; });
+  }
+  $("push").addEventListener("click", subscribe);
+
   // ── つなぎ方 ──
   $("save-token").addEventListener("click", function () {
     var t = $("token").value.trim();
@@ -268,7 +337,7 @@
     note("setup-note", "読んでいます…");
     show("list"); readShelf();
   });
-  $("gear").addEventListener("click", function () { $("gear-panel").hidden = false; });
+  $("gear").addEventListener("click", function () { pushState(); $("gear-panel").hidden = false; });
   $("gear-close").addEventListener("click", function () { $("gear-panel").hidden = true; });
   $("reload").addEventListener("click", function () { $("gear-panel").hidden = true; readShelf(); });
   $("forget").addEventListener("click", function () {
