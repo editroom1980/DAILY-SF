@@ -116,3 +116,6 @@ body { margin: 0; }
 .panel .wrap { display: grid; gap: 14px; }
 .panel-h { font-family: var(--serif); font-size: 22px; margin: 0; }
 .tag.new { background: var(--accent); color: var(--on-accent); }
+.follow { font-size: 13px; font-weight: 700; min-width: 52px; padding-inline: 8px; border-radius: 16px; min-height: 32px; margin-block: 6px; border: 1px solid var(--accent); }
+.follow[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.follow[aria-pressed="false"] { color: var(--muted); border-color: var(--line); }

@@ -194,7 +194,7 @@
     document.querySelectorAll(".s.now").forEach(function (el) { el.classList.remove("now"); });
     var cur = document.querySelector("#article .s[data-n='" + state.n + "']");
     if (cur) cur.classList.add("now");
-    if (scroll && cur) {
+    if (scroll && cur && saved.follow !== false) {
       var r = cur.getBoundingClientRect(), limit = window.innerHeight - 110;
       if (r.top < 70 || r.bottom > limit) {
         var calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -365,6 +365,19 @@
   function showRate() { $("rate").textContent = state.rate.toFixed(1) + "倍"; }
   showRate();
   $("long-btn").addEventListener("click", askLong);
+
+  // 読んでいる文を画面で追うか（切ると、光るだけで画面は動かない。朗読を聞きながら資料を読める）
+  function showFollow() {
+    var on = saved.follow !== false, b = $("follow");
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.textContent = on ? "追う" : "追わない";
+  }
+  $("follow").addEventListener("click", function () {
+    saved.follow = saved.follow === false; save(); showFollow();
+    if (saved.follow) mark(true);
+  });
+  showFollow();
+
 
   function setSize(px) {
     px = Math.min(26, Math.max(15, px));

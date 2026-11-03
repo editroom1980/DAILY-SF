@@ -1,6 +1,6 @@
 // DAILY-SF の service worker：画面の部品は先に覚えておく（電波が無くても開ける）。
 // 本棚のデータ（GitHub の API）は app.js が自分で取りに行き、朗読は app.js が Cache Storage に直近6本だけ覚える。
-const 版 = 'daily-sf-v3';
+const 版 = 'daily-sf-v4';
 const 部品 = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(版).then(c => c.addAll(部品)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
