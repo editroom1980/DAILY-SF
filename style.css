@@ -69,6 +69,12 @@ article th:last-child, article td:last-child { padding-right: 0; }
 article blockquote { margin: 0 0 1em; padding-left: 1em; border-left: 2px solid var(--line); }
 article blockquote.summary { background: var(--surface); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 12px 14px; margin: 0 0 2em; font-family: var(--sans); font-size: 0.82em; line-height: 1.85; color: var(--muted); }
 article .summary-h { display: block; font-weight: 700; font-size: 0.86em; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 4px; }
+article .cast { margin: -1.2em 0 2em; padding: 10px 14px 12px; border: 1px solid var(--line); border-radius: 6px; font-family: var(--sans); font-size: 0.8em; line-height: 1.7; }
+article .cast-h { display: block; font-weight: 700; font-size: 0.86em; letter-spacing: 0.12em; color: var(--accent); margin-bottom: 4px; }
+article .cast dl { margin: 0; display: grid; gap: 4px; }
+article .cast dl > div { display: grid; grid-template-columns: minmax(4.5em, max-content) 1fr; column-gap: 12px; }
+article .cast dt { font-weight: 700; color: var(--fg); }
+article .cast dd { margin: 0; color: var(--muted); }
 .s { border-radius: 3px; cursor: pointer; transition: background-color .15s; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .s.now { background: var(--mark); }
 .back-end { display: block; margin: 40px auto 0; min-height: 44px; padding-inline: 20px; border: 1px solid var(--line); border-radius: 22px; font-family: var(--sans); font-size: 15px; color: var(--accent); }
