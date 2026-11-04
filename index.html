@@ -56,6 +56,14 @@
     </div>
     <button type="button" class="pill back-end" data-back>本棚へ戻る</button>
   </div>
+  <div class="figview" id="figview" hidden role="dialog" aria-modal="true" aria-labelledby="figview-t">
+    <div class="figview-top"><span class="figview-t" id="figview-t"></span><button type="button" class="tbtn" id="figview-close" aria-label="図を閉じる">閉じる</button></div>
+    <img id="figview-img" alt="">
+    <div class="figview-keys">
+      <button type="button" class="pill" id="figview-prev">前の図</button>
+      <button type="button" class="pill" id="figview-next">次の図</button>
+    </div>
+  </div>
   <div class="bar">
     <div class="meter"><i id="meter"></i></div>
     <div class="wrap bar-in">

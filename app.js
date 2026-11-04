@@ -60,7 +60,7 @@
     return '<li><button type="button" class="book" data-open="' + b.id + '">' +
       '<span class="book-t">' + esc(b.title) + "</span>" +
       (b.intro ? '<span class="book-d">' + esc(b.intro) + "</span>" : "") +
-      '<span class="book-m">' + (b.chars || 0).toLocaleString() + "字" + (b.audio ? "・朗読つき" : "") + (extra || "") +
+      '<span class="book-m">' + (b.chars || 0).toLocaleString() + "字" + (b.audio ? "・朗読つき" : "") + (b.figs ? "・図解つき" : "") + (extra || "") +
       '<span class="book-p">' + (p > 0 && b.sentences ? "続きから " + Math.round(p / b.sentences * 100) + "%" : "") + "</span></span>" +
       "</button></li>";
   }
@@ -118,7 +118,11 @@
     gh("books/" + id + ".json").then(function (b) {
       state.book = b;
       saved.seen = saved.seen || {}; saved.seen[id] = 1; save(); if (shelf) badge();
-      $("article").innerHTML = '<h1 class="st">' + esc(b.heading || b.title) + "</h1>" + b.html;
+      var nf = (b.figs || []).length;
+      $("article").innerHTML = '<h1 class="st">' + esc(b.heading || b.title) + "</h1>" +
+        (nf ? '<button type="button" class="figs-jump" data-figs-jump>科学の図解を見る（' + nf + '枚）' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>' : "") + b.html + drawFigs(b);
+      loadFigs(id);
       $("vv").textContent = b.audio ? "VOICEVOX:" + (b.voice || "") : "朗読なし";
       ["play", "prev", "next", "rate"].forEach(function (k) { $(k).disabled = !b.audio; });
       state.n = Math.min(saved.pos[id] || 0, b.yomi.length - 1);
@@ -132,7 +136,7 @@
     });
   }
 
-  function close() { stop(); show("list"); drawShelf(); }
+  function close() { stop(); hideFig(); show("list"); drawShelf(); }
 
   // ── 長編にする ──
   function longBox() {
@@ -215,21 +219,65 @@
     if (!on && lock) { lock.release().catch(function () {}); lock = null; }
   }
 
-  // 朗読は1本10MB前後。取ってきた音は直近の6本だけ覚えておく（2回目からは電波なしで流せる）
-  function audioUrl(path) {
-    var KEY = "dsf-audio", req = "https://daily-sf.local/" + path;
+  // 取ってきた物を Cache Storage に覚えておく（2回目からは電波なしで使える）。keep 件を超えたら古いものから消す
+  function cachedUrl(path, KEY, keep, type) {
+    var req = "https://daily-sf.local/" + path;
     if (!window.caches) return gh(path, "blob").then(URL.createObjectURL);
     return caches.open(KEY).then(function (c) {
       return c.match(req).then(function (hit) {
         if (hit) return hit.blob();
         return gh(path, "blob").then(function (blob) {
-          return c.put(req, new Response(blob, { headers: { "Content-Type": "audio/mpeg" } })).then(function () {
-            return c.keys().then(function (ks) { return Promise.all(ks.slice(0, Math.max(0, ks.length - 6)).map(function (k) { return c.delete(k); })); });
+          return c.put(req, new Response(blob, { headers: { "Content-Type": type } })).then(function () {
+            return c.keys().then(function (ks) { return Promise.all(ks.slice(0, Math.max(0, ks.length - keep)).map(function (k) { return c.delete(k); })); });
           }).then(function () { return blob; }, function () { return blob; });
         });
       });
     }).then(function (blob) { return URL.createObjectURL(blob); });
   }
+  // 朗読は1本10MB前後なので直近の6本だけ。図解は1枚200KBほどなので40枚（10本ぶん）
+  function audioUrl(path) { return cachedUrl(path, "dsf-audio", 6, "audio/mpeg"); }
+  function figUrl(path) { return cachedUrl(path, "dsf-figs", 40, "image/png"); }
+
+  // ── 科学の図解 ──
+  // 本文の後ろに並べる。押すと全画面で開き、指で広げて読める。題の下の「科学の図解へ」で跳べる
+  var figs = { urls: [], n: 0 };
+  function drawFigs(b) {
+    figs.urls.forEach(function (u) { if (u) URL.revokeObjectURL(u); });
+    figs.urls = [];
+    var list = b.figs || [];
+    if (!list.length) return "";
+    return '<section class="figs" id="figs"><h2 class="ch">科学の図解</h2>' +
+      '<p class="figs-n">押すと大きく開き、指で広げられます。</p>' +
+      list.map(function (f, i) {
+        return '<figure class="fig"><button type="button" class="fig-btn" data-fig="' + i + '" aria-label="' + esc(f.title) + 'を大きく開く">' +
+          '<img alt="' + esc(f.title) + '" data-src="' + esc(f.src) + '"></button>' +
+          "<figcaption>" + (i + 1) + "／" + list.length + "　" + esc(f.title) + "</figcaption></figure>";
+      }).join("") + "</section>";
+  }
+  function loadFigs(id) {
+    document.querySelectorAll("#article img[data-src]").forEach(function (img, i) {
+      figUrl(img.dataset.src).then(function (u) {
+        if (state.id !== id) return URL.revokeObjectURL(u);
+        figs.urls[i] = u; img.src = u;
+        if (!$("figview").hidden && figs.n === i) $("figview-img").src = u;
+      }).catch(function () { img.alt = "図を読めませんでした（電波のある所で開き直してください）"; });
+    });
+  }
+  function showFig(i) {
+    var list = (state.book && state.book.figs) || [];
+    if (!list.length) return;
+    figs.n = (i + list.length) % list.length;
+    $("figview-t").textContent = (figs.n + 1) + "／" + list.length + "　" + list[figs.n].title;
+    $("figview-img").src = figs.urls[figs.n] || "";
+    $("figview-img").alt = list[figs.n].title;
+    $("figview").hidden = false;
+    $("figview").scrollTop = 0;
+  }
+  function hideFig() { $("figview").hidden = true; }
+  $("figview-close").addEventListener("click", hideFig);
+  $("figview-prev").addEventListener("click", function () { showFig(figs.n - 1); });
+  $("figview-next").addEventListener("click", function () { showFig(figs.n + 1); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("figview").hidden) hideFig(); });
 
   function play() {
     var b = state.book;
@@ -351,6 +399,9 @@
     var o = e.target.closest("[data-open]");
     if (o) return open(o.getAttribute("data-open"));
     if (e.target.closest("[data-back]")) return close();
+    var f = e.target.closest("[data-fig]");
+    if (f) return showFig(+f.dataset.fig);
+    if (e.target.closest("[data-figs-jump]")) return $("figs").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     var s = e.target.closest("#article .s");
     if (s) jump(+s.dataset.n);
   });

@@ -116,6 +116,22 @@ body { margin: 0; }
 .panel .wrap { display: grid; gap: 14px; }
 .panel-h { font-family: var(--serif); font-size: 22px; margin: 0; }
 .tag.new { background: var(--accent); color: var(--on-accent); }
+
+/* 科学の図解：図は紙の色で描いてあるので、暗い表示でも図そのものは変えない */
+.figs-jump { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin: -0.6em 0 1.6em; padding-inline: 14px; border: 1px solid var(--accent); border-radius: 18px; font-family: var(--sans); font-size: 14px; color: var(--accent); }
+.figs { margin: 3em 0 0; padding-top: 1.6em; border-top: 1px solid var(--line); scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 60px); }
+.figs .ch { margin-top: 0; }
+.figs-n { font-family: var(--sans); font-size: 14px; line-height: 1.7; color: var(--muted); margin: 0 0 1.4em; }
+.fig { margin: 0 0 2em; }
+.fig-btn { display: block; width: 100%; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.fig-btn img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 16; background: #f3efe6; }
+.fig figcaption { margin-top: 8px; font-family: var(--sans); font-size: 13px; line-height: 1.6; color: var(--muted); }
+.figview { position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top, 0px) + 4px) 0 calc(env(safe-area-inset-bottom, 0px) + 16px); }
+.figview-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding-inline: max(16px, env(safe-area-inset-left, 0px)); background: var(--bg); border-bottom: 1px solid var(--line); }
+.figview-t { font-family: var(--sans); font-size: 14px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.figview img { display: block; width: 100%; max-width: 540px; height: auto; margin: 0 auto; background: #f3efe6; }
+.figview-keys { display: flex; justify-content: center; gap: 12px; padding: 16px; }
 .follow { font-size: 13px; font-weight: 700; min-width: 52px; padding-inline: 8px; border-radius: 16px; min-height: 32px; margin-block: 6px; border: 1px solid var(--accent); }
 .follow[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
 .follow[aria-pressed="false"] { color: var(--muted); border-color: var(--line); }
