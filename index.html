@@ -41,8 +41,8 @@
     <button type="button" class="tbtn back" data-back aria-label="本棚へ戻る">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>本棚
     </button>
-    <span class="vv" id="vv"></span>
     <div class="size">
+      <button type="button" class="tbtn chip" id="terms-btn" aria-label="用語の一覧を開く">用語</button>
       <button type="button" class="tbtn follow" id="follow" aria-pressed="true" aria-label="読んでいる文を画面で追う">追う</button>
       <button type="button" class="tbtn" id="smaller" aria-label="文字を小さくする">小</button>
       <button type="button" class="tbtn" id="larger" aria-label="文字を大きくする">大</button>
@@ -50,6 +50,11 @@
   </div></div>
   <div class="wrap">
     <article id="article"></article>
+    <section class="rate-box" id="rate-box" aria-labelledby="rate-q">
+      <p class="rate-q" id="rate-q">この話はどうでしたか</p>
+      <div class="stars" id="stars" role="radiogroup" aria-labelledby="rate-q"></div>
+      <p class="rate-note" id="rate-note" aria-live="polite"></p>
+    </section>
     <div class="long" id="long-box" hidden>
       <p class="long-q" id="long-q"></p>
       <button type="button" class="pill" id="long-btn">長編にする</button>
@@ -64,9 +69,18 @@
       <button type="button" class="pill" id="figview-next">次の図</button>
     </div>
   </div>
+  <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-t">
+    <div class="sheet-dim" data-sheet-close></div>
+    <div class="sheet-in">
+      <span class="grab" aria-hidden="true"></span>
+      <div class="sheet-top"><h2 class="sheet-t" id="sheet-t"></h2><button type="button" class="tbtn" data-sheet-close>閉じる</button></div>
+      <div class="sheet-body" id="sheet-body"></div>
+    </div>
+  </div>
   <div class="bar">
     <div class="meter"><i id="meter"></i></div>
     <div class="wrap bar-in">
+      <div class="bar-info"><span class="count" id="count">1 / 1文</span><span class="vv" id="vv"></span></div>
       <div class="keys">
         <button type="button" class="rate" id="rate" aria-label="読む速さを変える">1.0倍</button>
         <button type="button" class="ibtn" id="prev" aria-label="前の文へ">
@@ -79,7 +93,10 @@
         <button type="button" class="ibtn" id="next" aria-label="次の文へ">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.6 5H18v14h-2.4zM4 5.6v12.8L14.2 12z"/></svg>
         </button>
-        <span class="count" id="count">1 / 1文</span>
+        <button type="button" class="figs-go" id="figs-go" aria-label="科学の図解へ跳ぶ">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="10" cy="10" r="3"/><path d="M12.2 12.2l4 4M7 17h4"/></svg>
+          <span id="figs-go-t">図解</span>
+        </button>
       </div>
       <p class="note" id="note" hidden></p>
     </div>

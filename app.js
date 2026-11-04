@@ -48,6 +48,7 @@
       shelf = s;
       saved.shelf = s; save();
       drawShelf();
+      if (saved.rpend && Object.keys(saved.rpend).length) sendRatings();
     }).catch(function (e) {
       if (e.message === "鍵") { show("setup"); note("setup-note", "鍵が使えませんでした。期限が切れたか、DAILY-SF-data を選んでいない鍵です。作り直して貼ってください。"); return; }
       if (saved.shelf) { shelf = saved.shelf; drawShelf(); }
@@ -61,6 +62,7 @@
       '<span class="book-t">' + esc(b.title) + "</span>" +
       (b.intro ? '<span class="book-d">' + esc(b.intro) + "</span>" : "") +
       '<span class="book-m">' + (b.chars || 0).toLocaleString() + "字" + (b.audio ? "・朗読つき" : "") + (b.figs ? "・図解つき" : "") + (extra || "") +
+      (stars(b.id) ? '<span class="book-r" aria-label="評価 星' + stars(b.id) + 'つ">' + "★★★★★".slice(0, stars(b.id)) + '<i>' + "★★★★★".slice(stars(b.id)) + "</i></span>" : "") +
       '<span class="book-p">' + (p > 0 && b.sentences ? "続きから " + Math.round(p / b.sentences * 100) + "%" : "") + "</span></span>" +
       "</button></li>";
   }
@@ -118,11 +120,12 @@
     gh("books/" + id + ".json").then(function (b) {
       state.book = b;
       saved.seen = saved.seen || {}; saved.seen[id] = 1; save(); if (shelf) badge();
-      var nf = (b.figs || []).length;
-      $("article").innerHTML = '<h1 class="st">' + esc(b.heading || b.title) + "</h1>" +
-        (nf ? '<button type="button" class="figs-jump" data-figs-jump>科学の図解を見る（' + nf + '枚）' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>' : "") + b.html + drawFigs(b);
+      $("article").innerHTML = '<h1 class="st">' + esc(b.heading || b.title) + "</h1>" + b.html + drawFigs(b);
       loadFigs(id);
+      figsGo.y = null; figsGoState();
+      $("figs-go").hidden = !(b.figs || []).length;
+      $("terms-btn").hidden = !(b.terms || []).length;
+      drawStars();
       $("vv").textContent = b.audio ? "VOICEVOX:" + (b.voice || "") : "朗読なし";
       ["play", "prev", "next", "rate"].forEach(function (k) { $(k).disabled = !b.audio; });
       state.n = Math.min(saved.pos[id] || 0, b.yomi.length - 1);
@@ -136,7 +139,116 @@
     });
   }
 
-  function close() { stop(); hideFig(); show("list"); drawShelf(); }
+  function close() { stop(); hideFig(); hideSheet(); show("list"); drawShelf(); }
+
+  // ── 用語（2026-11-04 依頼者「文中の専門用語やガジェットの語句をタップすると解説が表示されるようにしてくれ」）──
+  // 本文の語の最初の1か所に印（.term）が付いている。押すと下から板が出る。上の帯の「用語」で一覧を開ける
+  var sheetFrom = null;
+  function terms() { return (state.book && state.book.terms) || []; }
+  function openSheet(title, html) {
+    sheetFrom = document.activeElement;
+    $("sheet-t").textContent = title;
+    $("sheet-body").innerHTML = html;
+    $("sheet").hidden = false;
+    $("sheet-body").scrollTop = 0;
+    $("sheet").querySelector(".sheet-top [data-sheet-close]").focus({ preventScroll: true });
+  }
+  function hideSheet() {
+    if ($("sheet").hidden) return;
+    $("sheet").hidden = true;
+    if (sheetFrom && sheetFrom.focus) sheetFrom.focus({ preventScroll: true });
+  }
+  function showTerm(i) {
+    var t = terms()[i];
+    if (!t) return;
+    openSheet(t.name, '<p class="term-text">' + esc(t.text) + "</p>" +
+      '<button type="button" class="sheet-link" data-terms-list>用語の一覧（' + terms().length + "語）</button>");
+  }
+  function showTerms() {
+    // 題の上に「用語」の札が出るので、題は「一覧　12語」（札と合わせて「用語の一覧」と読む）
+    openSheet("一覧　" + terms().length + "語", '<ol class="term-list">' + terms().map(function (t, i) {
+      return '<li><button type="button" class="term-row" data-term-go="' + i + '"><b>' + esc(t.name) + "</b><span>" + esc(t.text) + "</span></button></li>";
+    }).join("") + "</ol>");
+  }
+  // 一覧から選んだ語を、本文の中で光らせる
+  function goTerm(i) {
+    hideSheet();
+    var el = document.querySelector('#article .term[data-term="' + i + '"]');
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: calm() ? "auto" : "smooth" });
+    el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit");
+  }
+  function calm() { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+
+  // ── 評価（星1〜5）──
+  // この iPhone に覚え、本棚の ratings/<id>.json にも書く（ほかの端末と、毎朝の Mac が読める）。送れなかった分は次に本棚を読んだときに送り直す
+  var words = ["", "いまひとつ", "もう少し", "ふつう", "良かった", "とても良かった"];
+  function stars(id) { return (saved.ratings && saved.ratings[id]) || (shelf && shelf.ratings && shelf.ratings[id]) || 0; }
+  function drawStars() {
+    var n = stars(state.id), h = [];
+    for (var i = 1; i <= 5; i++) {
+      h.push('<button type="button" class="star-btn" role="radio" aria-checked="' + (i === n) + '" aria-label="星' + i + "つ・" + words[i] + '" data-star="' + i + '"' + (i === (n || 1) ? "" : ' tabindex="-1"') + ">" +
+        '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.9 1.05-6.14L3.08 9.3l6.17-.9z"/></svg></button>');
+    }
+    $("stars").innerHTML = h.join("");
+    [].forEach.call($("stars").children, function (b, i) { b.classList.toggle("on", i < n); });
+    $("rate-note").textContent = n ? words[n] + "（あとから変えられます）" : "星を押して、この話を評価してください。";
+  }
+  function rateBook(n) {
+    var b = state.book;
+    saved.ratings = saved.ratings || {}; saved.ratings[b.id] = n;
+    saved.rpend = saved.rpend || {}; saved.rpend[b.id] = { title: b.title, stars: n };
+    save(); drawStars();
+    $("stars").querySelector('[data-star="' + n + '"]').focus({ preventScroll: true });
+    sendRatings();
+  }
+  // 同じ本を送っている間は次を待たせる（続けて押すと、同じファイルへの書き込みがぶつかるため）
+  var sending = {};
+  function sendRatings() {
+    var p = saved.rpend || {};
+    Object.keys(p).forEach(function (id) {
+      if (sending[id]) return;
+      var r = p[id];
+      sending[id] = true;
+      var body = JSON.stringify({ id: id, title: r.title, stars: r.stars, at: new Date().toISOString(), from: "iPhone" }, null, 2) + "\n";
+      putFile("ratings/" + id + ".json", body, "評価：" + r.title + " 星" + r.stars).then(function () {
+        sending[id] = false;
+        if (saved.rpend[id] && saved.rpend[id].stars === r.stars) { delete saved.rpend[id]; save(); }
+        else return sendRatings();
+        if (state.id === id) $("rate-note").textContent = words[r.stars] + "（本棚に送りました。あとから変えられます）";
+      }).catch(function () {
+        sending[id] = false;
+        if (state.id === id) $("rate-note").textContent = words[r.stars] + "（この iPhone に覚えました。電波のある所で本棚へ送ります）";
+      });
+    });
+  }
+
+  // ── 画面下の「図解」：図解へ跳び、図解を見ているあいだは「本文へ」に変わって、読んでいた所へ戻る ──
+  var figsGo = { y: null };
+  // 図解の節が画面の真ん中あたりにあるあいだだけ「本文へ」。通り過ぎたら（評価や長編の所）「図解」に戻す
+  function inFigs() { var f = $("figs"); if (!f) return false; var r = f.getBoundingClientRect(); return r.top < window.innerHeight * 0.6 && r.bottom > window.innerHeight * 0.4; }
+  function figsGoState() {
+    var on = inFigs();
+    $("figs-go-t").textContent = on ? "本文へ" : "図解";
+    $("figs-go").setAttribute("aria-label", on ? "読んでいた所へ戻る" : "科学の図解へ跳ぶ");
+    $("figs-go").classList.toggle("back", on);
+  }
+  function figsJump() {
+    var behavior = calm() ? "auto" : "smooth";
+    if (inFigs()) {
+      if (figsGo.y != null) window.scrollTo({ top: figsGo.y, behavior: behavior });
+      else { var cur = document.querySelector("#article .s.now"); if (cur) cur.scrollIntoView({ block: "center", behavior: behavior }); }
+      return;
+    }
+    figsGo.y = window.scrollY;
+    $("figs").scrollIntoView({ behavior: behavior });
+  }
+  var figsTick = false;
+  window.addEventListener("scroll", function () {
+    if (figsTick || $("reader").hidden) return;
+    figsTick = true;
+    requestAnimationFrame(function () { figsTick = false; if (state.book) figsGoState(); });
+  }, { passive: true });
 
   // ── 長編にする ──
   function longBox() {
@@ -277,7 +389,14 @@
   $("figview-close").addEventListener("click", hideFig);
   $("figview-prev").addEventListener("click", function () { showFig(figs.n - 1); });
   $("figview-next").addEventListener("click", function () { showFig(figs.n + 1); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("figview").hidden) hideFig(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { if (!$("figview").hidden) hideFig(); else hideSheet(); return; }
+    var t = e.target.closest && e.target.closest("#article .term");
+    if (t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showTerm(+t.dataset.term); return; }
+    // 星は左右の矢印で1つずつ動かせる（ラジオボタンの決まり）
+    var s = e.target.closest && e.target.closest(".star-btn");
+    if (s && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { e.preventDefault(); rateBook(Math.max(1, Math.min(5, +s.dataset.star + (e.key === "ArrowRight" ? 1 : -1)))); }
+  });
 
   function play() {
     var b = state.book;
@@ -401,7 +520,14 @@
     if (e.target.closest("[data-back]")) return close();
     var f = e.target.closest("[data-fig]");
     if (f) return showFig(+f.dataset.fig);
-    if (e.target.closest("[data-figs-jump]")) return $("figs").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    if (e.target.closest("[data-sheet-close]")) return hideSheet();
+    if (e.target.closest("[data-terms-list]")) return showTerms();
+    var g = e.target.closest("[data-term-go]");
+    if (g) return goTerm(+g.dataset.termGo);
+    var t = e.target.closest("#article .term");
+    if (t) return showTerm(+t.dataset.term);
+    var st = e.target.closest("[data-star]");
+    if (st) return rateBook(+st.dataset.star);
     var s = e.target.closest("#article .s");
     if (s) jump(+s.dataset.n);
   });
@@ -416,6 +542,8 @@
   function showRate() { $("rate").textContent = state.rate.toFixed(1) + "倍"; }
   showRate();
   $("long-btn").addEventListener("click", askLong);
+  $("figs-go").addEventListener("click", figsJump);
+  $("terms-btn").addEventListener("click", showTerms);
 
   // 読んでいる文を画面で追うか（切ると、光るだけで画面は動かない。朗読を聞きながら資料を読める）
   function showFollow() {
