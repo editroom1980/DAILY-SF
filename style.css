@@ -78,6 +78,9 @@ article .cast dd { margin: 0; color: var(--muted); }
 article .notes { margin: 3em 0 0; }
 article .notes dl { grid-template-columns: 7.5em 1fr; }
 article .notes a { color: var(--accent); word-break: break-word; }
+article .gadgets dl { grid-template-columns: 1fr; gap: 2px; }
+article .gadgets dt { margin-top: 10px; }
+article .gadgets dl > div:first-child dt { margin-top: 0; }
 .s { border-radius: 3px; cursor: pointer; transition: background-color .15s; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .s.now { background: var(--mark); }
 .back-end { display: block; margin: 40px auto 0; min-height: 44px; padding-inline: 20px; border: 1px solid var(--line); border-radius: 22px; font-family: var(--sans); font-size: 15px; color: var(--accent); }
