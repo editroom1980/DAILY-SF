@@ -13,12 +13,7 @@
   --serif: "Hiragino Mincho ProN", "Zen Old Mincho", "Yu Mincho", serif;
   --sans: "Hiragino Sans", "Zen Kaku Gothic New", "Yu Gothic", sans-serif;
   --size: 18px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #191a1c; --surface: #222326; --fg: #e9e3d6; --muted: #a59d8f; --line: #3a3a3c;
-    --accent: #e9e3d6; --on-accent: #191a1c; --mark: #3b3220; --gold: #d4a245; color-scheme: dark;
-  }
+  color-scheme: light;
 }
 :root[data-theme="dark"] {
   --bg: #191a1c; --surface: #222326; --fg: #e9e3d6; --muted: #a59d8f; --line: #3a3a3c;
@@ -120,6 +115,9 @@ body { margin: 0; }
 .panel { position: fixed; inset: 0; z-index: 20; background: var(--bg); padding-top: calc(env(safe-area-inset-top, 0px) + 32px); }
 .panel .wrap { display: grid; gap: 14px; }
 .panel-h { font-family: var(--serif); font-size: 22px; margin: 0; }
+.panel-h + .seg + .panel-h { margin-top: 18px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seg .pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 
 /* 科学の図解：図は紙の色で描いてあるので、暗い表示でも図そのものは変えない */
 .figs { margin: 3em 0 0; padding-top: 1.6em; border-top: 1px solid var(--line); scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 60px); }
@@ -142,7 +140,6 @@ body { margin: 0; }
 
 /* ── 2026-11-04 用語・星の評価・画面下の図解 ── */
 :root { --card: #faf7f0; --shadow: 0 -1px 0 #d6cdbb, 0 10px 30px rgba(60, 45, 20, .16); --star: #a67417; --star-off: #8a806e; --term-line: #a67417; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --card: #26272a; --shadow: 0 6px 24px rgba(0, 0, 0, .5); --star: #d4a245; --star-off: #77705f; --term-line: #d4a245; } }
 :root[data-theme="dark"] { --card: #26272a; --shadow: 0 6px 24px rgba(0, 0, 0, .5); --star: #d4a245; --star-off: #77705f; --term-line: #d4a245; }
 
 /* 本文の用語：点線の下線（押せる印）。押した所は .s の背景より上に出る */

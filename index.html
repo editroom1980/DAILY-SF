@@ -6,8 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="DAILY-SF">
-<meta name="theme-color" content="#eef0f1" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#11151b" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f3efe6">
+<!-- 表示の明るさは ⚙ で選ぶ（既定は明るい）。開いた瞬間から選んだ色で出すため、CSS より先に当てる -->
+<script>try { if (JSON.parse(localStorage.getItem("dsf") || "{}").theme === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}</script>
 <title>毎日のSF短編</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -27,7 +29,7 @@
 <main id="list" class="wrap" hidden>
   <div class="head">
     <h1 class="brand">毎日のSF短編</h1>
-    <button type="button" class="tbtn" id="gear" aria-label="つなぎ方">
+    <button type="button" class="tbtn" id="gear" aria-label="設定">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
   </div>
@@ -105,6 +107,11 @@
 
 <div id="gear-panel" class="panel" hidden>
   <div class="wrap">
+    <h2 class="panel-h">表示</h2>
+    <div class="seg" role="group" aria-label="表示の明るさ">
+      <button type="button" class="pill" data-theme-set="light">明るい</button>
+      <button type="button" class="pill" data-theme-set="dark">暗い</button>
+    </div>
     <h2 class="panel-h">つなぎ方</h2>
     <p class="note">本棚：editroom1980/DAILY-SF-data（非公開）。鍵はこの iPhone の中にだけあります。</p>
     <p class="note" id="push-state"></p>

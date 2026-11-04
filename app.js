@@ -545,6 +545,20 @@
   $("figs-go").addEventListener("click", figsJump);
   $("terms-btn").addEventListener("click", showTerms);
 
+  // 表示の明るさ（⚙ で選ぶ。既定は明るい。iPhone 本体の暗い表示には合わせない）
+  function showTheme() {
+    var dark = saved.theme === "dark";
+    if (dark) document.documentElement.dataset.theme = "dark"; else delete document.documentElement.dataset.theme;
+    document.querySelector('meta[name="theme-color"]').content = dark ? "#191a1c" : "#f3efe6";
+    [].forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.themeSet === (dark ? "dark" : "light")));
+    });
+  }
+  [].forEach.call(document.querySelectorAll("[data-theme-set]"), function (b) {
+    b.addEventListener("click", function () { saved.theme = b.dataset.themeSet; save(); showTheme(); });
+  });
+  showTheme();
+
   // 読んでいる文を画面で追うか（切ると、光るだけで画面は動かない。朗読を聞きながら資料を読める）
   function showFollow() {
     var on = saved.follow !== false, b = $("follow");
